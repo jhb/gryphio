@@ -1,5 +1,5 @@
 import neo4j
-from .graph import  Node, Edge, Path
+from .graph import  Node, Relation, Path
 
 class Neo4jDB():
 
@@ -8,12 +8,12 @@ class Neo4jDB():
         self.session = self.driver.session()
         self.tx = None
         self._nodecache = {}
-        self._edgecache = {}
+        self._relationcache = {}
 
     def begin(self):
         self.tx = self.session.begin_transaction()
         self._nodecache = {}
-        self._edgecache = {}
+        self._relationcache = {}
 
     def commit(self):
         self.tx.commit()
@@ -30,29 +30,29 @@ class Neo4jDB():
         return self._nodecache[neonode]
 
     def _relN2G(self,neorel):
-        if neorel not in self._edgecache:
-            edge = Edge(self._nodeN2G(neorel.start_node),
-                        neorel.type,
-                        self._nodeN2G(neorel.end_node),
-                        **dict(neorel.items()))
-            self._edgecache[neorel]=edge
-        return self._edgecache[neorel]
+        if neorel not in self._relationcache:
+            relation = Relation(self._nodeN2G(neorel.start_node),
+                            neorel.type,
+                            self._nodeN2G(neorel.end_node),
+                            **dict(neorel.items()))
+            self._relationcache[neorel]=relation
+        return self._relationcache[neorel]
 
     def _pathN2G(self, neopath):
         path = Path()
         n0 = self._nodeN2G(neopath.start_node)
 
         for rel in neopath:
-            edge = self._relN2G(rel)
-            path.edges.append(edge)
+            relation = self._relN2G(rel)
+            path.relations.append(relation)
 
         for n in neopath.nodes:
             path.nodes.append(self._nodeN2G(n))
 
         for i in range(len(path.nodes)):
             path.elements.append(path.nodes[i])
-            if path.edges and i<len(path.edges):
-                path.elements.append(path.edges[i])
+            if path.relations and i<len(path.relations):
+                path.elements.append(path.relations[i])
 
         return path
 
@@ -139,13 +139,13 @@ class Neo4jDB():
     def delNode(self,node):
         pass
 
-    def storeEdge(self,edge):
+    def storeRelation(self,relation):
         pass
 
-    def delEdge(self,edge):
+    def delRelation(self,relation):
         pass
 
-    def getEdge(self,_uid):
+    def getRelation(self,_uid):
         pass
 
 class Result(list):

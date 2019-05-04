@@ -14,7 +14,7 @@ def newuid():
 
 RELSPECIALS = ['source', 'reltype', 'target']
 
-class Node(set):
+class Node(set): # XXX move to _labels
 
     def __init__(self, *args, **kwargs):
 
@@ -37,7 +37,7 @@ class Node(set):
         return '<%s %s>' % (self.__class__.__name__, self._uid)
 
 
-class Edge(object):
+class Relation(object):
 
     def __init__(self, source, reltype, target, _uid=None, **kwargs):
         if '_uid' not in kwargs:
@@ -61,7 +61,7 @@ class Path:
 
     def __init__(self):
         self.nodes = []
-        self.edges = []
+        self.relations = []
         self.elements = []
 
 
