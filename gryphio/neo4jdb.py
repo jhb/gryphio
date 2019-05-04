@@ -1,0 +1,162 @@
+import neo4j
+from .graph import  Node, Edge, Path
+
+class Neo4jDB():
+
+    def __init__(self,uri,login,passwd):
+        self.driver = neo4j.GraphDatabase.driver(uri, auth=(login, passwd))
+        self.session = self.driver.session()
+        self.tx = None
+        self._nodecache = {}
+        self._edgecache = {}
+
+    def begin(self):
+        self.tx = self.session.begin_transaction()
+        self._nodecache = {}
+        self._edgecache = {}
+
+    def commit(self):
+        self.tx.commit()
+        self.tx = None
+
+    def rollback(self):
+        self.tx.rollback()
+        self.tx = None
+
+    def _nodeN2G(self, neonode):
+        if neonode not in self._nodecache:
+            node = Node(*neonode.labels, **dict(neonode.items()))
+            self._nodecache[neonode]=node
+        return self._nodecache[neonode]
+
+    def _relN2G(self,neorel):
+        if neorel not in self._edgecache:
+            edge = Edge(self._nodeN2G(neorel.start_node),
+                        neorel.type,
+                        self._nodeN2G(neorel.end_node),
+                        **dict(neorel.items()))
+            self._edgecache[neorel]=edge
+        return self._edgecache[neorel]
+
+    def _pathN2G(self, neopath):
+        path = Path()
+        n0 = self._nodeN2G(neopath.start_node)
+
+        for rel in neopath:
+            edge = self._relN2G(rel)
+            path.edges.append(edge)
+
+        for n in neopath.nodes:
+            path.nodes.append(self._nodeN2G(n))
+
+        for i in range(len(path.nodes)):
+            path.elements.append(path.nodes[i])
+            if path.edges and i<len(path.edges):
+                path.elements.append(path.edges[i])
+
+        return path
+
+
+    def query(self,query,**kwargs):
+        if not self.tx:
+            self.begin()
+        out = Result()
+        data = self.tx.run(query,**kwargs)
+
+        for row in data:
+            line = Row()
+            for k,v in row.items():
+                value=v
+                #print(type(v))
+                if type(v) == neo4j.Node:
+                    value = self._nodeN2G(v)
+                elif isinstance(v,neo4j.Relationship):
+                    value = self._relN2G(v)
+                elif isinstance(v,neo4j.Path):
+                    value = self._pathN2G(v)
+
+                line[k] = value
+            out.append(line)
+        return out
+
+
+    def storeNode(self,node):
+        q = "MERGE (n {_uid:%s}) ON CREATE SET n={props} ON MATCH SET n={props} return n" % repr(node._uid)
+        r = self.query(q,props=node.__dict__)
+        n = r.first.n
+        toremove = n.difference(node)
+        toadd = node.difference(n)
+        if (toremove or toadd):
+            q = 'MATCH (n {_uid:%s})' % repr(n._uid)
+            if toremove:
+                q+= ' REMOVE n:%s ' % ':'.join(toremove)
+            if toadd:
+                q+= ' SET n:%s' % ':'.join(toadd)
+            q += ' RETURN n'
+            r = self.query(q)
+            n = r.first.n
+        return n
+
+
+    def getNode(self,_uid):
+        if isinstance(_uid,Node):
+            _uid = _uid._uid
+        q = "MATCH (n) where n._uid=%s return n limit 1" % repr(_uid)
+        r = self.query(q)
+        if r:
+            return r.first.n
+
+
+    def jump(self,node,direction=None, reltypes=None, labels=None):
+        in_arrow=''
+        out_arrow=''
+
+        if direction=='in':
+            in_arrow = '<'
+        elif direction=='out':
+            out_arrow='>'
+
+        q = 'MATCH (n)%s-[r]-%s(m) WHERE n._uid=%s' % (in_arrow,out_arrow,repr(node._uid))
+
+        if reltypes:
+            if type(reltypes)==str:
+                reltypes = [reltypes]
+            q+=' AND (' + ' OR '.join(['type(r)=%s' % repr(rt) for rt in reltypes]) +')'
+
+        if labels:
+            if type(labels)==str:
+                labels = [labels]
+            q+=' AND ('+ ' OR '.join(['m:%s' % l for l in labels])+')'
+
+        q+=' RETURN n,r,m'
+        print(q)
+        r = self.query(q)
+        return r
+
+
+
+
+    def delNode(self,node):
+        pass
+
+    def storeEdge(self,edge):
+        pass
+
+    def delEdge(self,edge):
+        pass
+
+    def getEdge(self,_uid):
+        pass
+
+class Result(list):
+
+    @property
+    def first(self):
+        return self[0]
+
+class Row(dict):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.__dict__=self
+

@@ -1,0 +1,1 @@
+auth=("url", "login", "pass")
