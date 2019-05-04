@@ -82,10 +82,7 @@ class Graph:
         if not isinstance(node,Node):
             node = self.getNode(node)
 
-        if 'Sem_Relation' in node:
-            reltype='Sem_R_PROP'
-        else:
-            reltype='Sem_N_PROP'
+        reltype = 'SEM_PROP'
 
         s = Schema(node)
         r = self.jump(node,'out',reltype)
