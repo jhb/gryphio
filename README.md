@@ -1,2 +1,6 @@
-# gryphio
-Framework for duck typed graphs
+gryphio
+=======
+
+A framework for duck-typed graphs
+
+status:Planning and early experiments
