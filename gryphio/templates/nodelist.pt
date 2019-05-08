@@ -1,0 +1,25 @@
+<html lang="en" metal:use-macro="templates['main'].macros.main">
+<body>
+
+    <ul metal:fill-slot="content" >
+        <li tal:repeat='node nodes'>
+            <a href="" tal:attributes="href '/node/%s' % node._uid; id node._uid" >
+                <span tal:replace="node._uid"></span>
+                <span tal:replace="', '.join(node._labels)"></span>
+            </a>
+            <small>
+            <ul>
+                <li tal:repeat='item sorted([i for i in node.__dict__.items() if not i[0].startswith("x")])'>
+                    <span tal:replace="item[0]"></span>:
+                    <span tal:replace="item[1]"></span>
+                </li>
+
+            </ul>
+            </small>
+        </li>
+
+    </ul>
+
+
+</body>
+</html>
