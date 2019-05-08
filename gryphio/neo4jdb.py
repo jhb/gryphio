@@ -1,5 +1,5 @@
 import neo4j
-from .graph import  Node, Relation, Path
+from graph import  Node, Relation, Path
 
 class Neo4jDB():
 
@@ -27,6 +27,7 @@ class Neo4jDB():
         if neonode not in self._nodecache:
             node = Node(*neonode.labels, **dict(neonode.items()))
             self._nodecache[neonode]=node
+            node._labels = set(node._labels)
         return self._nodecache[neonode]
 
     def _relN2G(self,neorel):
@@ -82,10 +83,16 @@ class Neo4jDB():
 
     def storeNode(self,node):
         q = "MERGE (n {_uid:%s}) ON CREATE SET n={props} ON MATCH SET n={props} return n" % repr(node._uid)
-        r = self.query(q,props=node.__dict__)
+        props = {}
+        for k,v in node.__dict__.items():
+            if type(v)==set:
+                v = list(v)
+            props[k]=v
+
+        r = self.query(q,props=props)
         n = r.first.n
-        toremove = n.difference(node)
-        toadd = node.difference(n)
+        toremove = n._labels.difference(node._labels)
+        toadd = node._labels.difference(n._labels)
         if (toremove or toadd):
             q = 'MATCH (n {_uid:%s})' % repr(n._uid)
             if toremove:
@@ -105,6 +112,18 @@ class Neo4jDB():
         r = self.query(q)
         if r:
             return r.first.n
+
+    def findNodes(self,**kwargs):
+        f = []
+        for k,v in kwargs.items():
+            if not isinstance(v,Filter):
+                v = Filter(value=v)
+            f.append(v.s(k))
+        q = "MATCH (n) where %s return n" % (' AND '.join(f))
+        print(q)
+        r = self.query(q)
+        if r:
+            return [row.n for row in r]
 
 
     def jump(self,node,direction=None, reltypes=None, labels=None):
@@ -160,3 +179,18 @@ class Row(dict):
         super().__init__(*args,**kwargs)
         self.__dict__=self
 
+class Filter():
+
+    def __init__(self,comparison='=',value=None):
+        self.comparison = comparison
+        self.value = value
+
+    def s(self,k,nodename='n'):
+        return '%s.%s %s %s' % (nodename,k,self.comparison,repr(self.value))
+
+class Exists(Filter):
+
+    def s(self,k,nodename='n'):
+        return "EXISTS (%s.%s)" % (nodename,k)
+
+exists = Exists()

@@ -14,19 +14,18 @@ def newuid():
 
 RELSPECIALS = ['source', 'reltype', 'target']
 
-class Node(set): # XXX move to _labels
+class Node(object):
 
     def __init__(self, *args, **kwargs):
 
         if '_uid' not in kwargs:
             kwargs['_uid'] = newuid()
-        self.add('Node')
-        super().__init__(args)
-        #self.add('Node') #not quite sure
+        self._labels = set(args)
+        self._labels.add('Node')
         self.__dict__.update(kwargs)
 
     def __str__(self):
-        argstring = ', '.join([repr(i) for i in self])
+        argstring = ', '.join([repr(i) for i in self._labels])
         kwargsstring = ', '.join(
                 ['%s=%s' % (k, repr(v)) for k, v in self.__dict__.items() if (k=='_uid') or not k.startswith('_')])
         parameterstring = ', '.join([e for e in [argstring, kwargsstring] if e])
@@ -39,16 +38,17 @@ class Node(set): # XXX move to _labels
 
 class Relation(object):
 
-    def __init__(self, source, reltype, target, _uid=None, **kwargs):
+    def __init__(self, _source, _reltype, _target, _uid=None, **kwargs):
+        self._uid=None
         if '_uid' not in kwargs:
             kwargs['_uid'] = newuid()
-        self.source = source
-        self.reltype = reltype
-        self.target = target
+        self._source = _source
+        self._reltype = _reltype
+        self._target = _target
         self.__dict__.update(kwargs)
 
     def __str__(self):
-        argstring = ", ".join([str(self.source), repr(self.reltype), str(self.target)])
+        argstring = ", ".join([str(self._source), repr(self._reltype), str(self._target)])
         kwargsstring = ', '.join(
                 ['%s=%s' % (k, repr(v)) for k, v in self.__dict__.items() if k not in RELSPECIALS])
         parameterstring = ', '.join([e for e in [argstring, kwargsstring] if e])
@@ -77,6 +77,8 @@ class Graph:
         self.db = db
         self.getNode=db.getNode
         self.jump = db.jump
+        self.storeNode = db.storeNode
+        self.findNodes = db.findNodes
 
     def getSchema(self,node):
         if not isinstance(node,Node):
@@ -90,13 +92,17 @@ class Graph:
             s._props[row.m.techname]=(row.r,row.m)
         return s
 
+    def getNodes(self):
+        return [r.n for r in self.db.query('MATCH (n) return n')]
+
+
 class SchemaException(Exception):
     pass
 
 class Schema:
 
     def __init__(self, node, _props=None):
-        self._label = list(node)[0]
+        self._label = list(node._labels)[0]
         if _props is None:
             _props={}
         self._props = _props
@@ -109,8 +115,21 @@ class Schema:
     def getPropKeys(self):
         return tuple(self._props.keys())
 
-    def assignToNode(self):
-        pass
+    def assignTo(self,node):
+        for k,v in self._props.items():
+            rel,propnode = v
+            amin,amax = self.arity2mm(rel.arity)
+            scalartype = propnode.scalartype
+            if scalartype == 'string': scalartype='str'
+            if amax>1:
+                newvalue = []
+            else:
+                newvalue =  __builtins__.get(scalartype)()
+            if not hasattr(node,k):
+                setattr(node,k,newvalue)
+        return node
+
+
 
     def checkNode(self,node):
         errors = {}
@@ -132,7 +151,13 @@ class Schema:
         min=0
         max=0
 
-        if type(arity)=='int':
+        try:
+            arity = int(arity)
+        except:
+            pass
+
+
+        if type(arity)==int:
             min=arity
             max=arity
         elif ',' in arity:
