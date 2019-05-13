@@ -119,8 +119,11 @@ class Neo4jDB():
             if not isinstance(v,Filter):
                 v = Filter(value=v)
             f.append(v.s(k))
-        q = "MATCH (n) where %s return n" % (' AND '.join(f))
-        print(q)
+        if f:
+            q = "MATCH (n) where %s return n" % (' AND '.join(f))
+        else:
+            q = "MATCH (n) return n"
+
         r = self.query(q)
         if r:
             return [row.n for row in r]
@@ -148,7 +151,6 @@ class Neo4jDB():
             q+=' AND ('+ ' OR '.join(['m:%s' % l for l in labels])+')'
 
         q+=' RETURN n,r,m'
-        print(q)
         r = self.query(q)
         return r
 
@@ -158,14 +160,46 @@ class Neo4jDB():
     def delNode(self,node):
         pass
 
+
+    def getRelation(self,_uid):
+        if isinstance(_uid,Relation):
+            _uid = _uid._uid
+        q = "MATCH ()-[r]->() where r._uid=%s return r limit 1" % repr(_uid)
+        r = self.query(q)
+        if r:
+            return r.first.r
+
+    def findRelations(self,**kwargs):
+        f = []
+        for k,v in kwargs.items():
+            if not isinstance(v,Filter):
+                v = Filter(value=v)
+            f.append(v.s(k))
+        if f:
+            q = "MATCH ()-[r]->() where %s return r" % (' AND '.join(f))
+        else:
+            q = "MATCH ()-[r]->() return r"
+
+        r = self.query(q)
+        if r:
+            return [row.r for row in r]
+
+
+
+    def dict2cypher(self,d):
+        out = []
+        for k,v in d.items():
+            out.append('`%s`:%s' % (k,repr(v)))
+
+        return '{'+','.join(out)+'}'
+
     def storeRelation(self,relation):
         pass
 
     def delRelation(self,relation):
         pass
 
-    def getRelation(self,_uid):
-        pass
+
 
 class Result(list):
 

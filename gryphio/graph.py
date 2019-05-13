@@ -3,6 +3,8 @@ import uuid
 import random
 import string
 
+import neo4jdb
+
 counter = {}
 
 
@@ -12,7 +14,7 @@ def newuid():
     # return counter['uid']
 
 
-RELSPECIALS = ['source', 'reltype', 'target']
+RELSPECIALS = ['_source', '_reltype', '_target']
 
 class Node(object):
 
@@ -27,7 +29,7 @@ class Node(object):
     def __str__(self):
         argstring = ', '.join([repr(i) for i in self._labels])
         kwargsstring = ', '.join(
-                ['%s=%s' % (k, repr(v)) for k, v in self.__dict__.items() if (k=='_uid') or not k.startswith('_')])
+                ['%s=%s' % (k, repr(v)) for k, v in self.__dict__.items() if not k.startswith('_labels')])
         parameterstring = ', '.join([e for e in [argstring, kwargsstring] if e])
 
         return "%s(%s)" % (self.__class__.__name__, parameterstring)
@@ -38,8 +40,7 @@ class Node(object):
 
 class Relation(object):
 
-    def __init__(self, _source, _reltype, _target, _uid=None, **kwargs):
-        self._uid=None
+    def __init__(self, _source, _reltype, _target, **kwargs):
         if '_uid' not in kwargs:
             kwargs['_uid'] = newuid()
         self._source = _source
@@ -77,14 +78,22 @@ class Graph:
         self.db = db
         self.getNode=db.getNode
         self.jump = db.jump
-        self.storeNode = db.storeNode
-        self.findNodes = db.findNodes
 
-    def getSchema(self,node):
-        if not isinstance(node,Node):
-            node = self.getNode(node)
+    def __getattr__(self,key):
+        "proxy to the (neo4j"
+        return getattr(self.db,key)
 
-        reltype = 'SEM_PROP'
+    def getSchema(self,node=None,**kwargs):
+        if node is None:
+            if kwargs:
+                nodes = self.findNodes(**kwargs)
+                node = nodes[0]
+            else:
+                raise Exception('We need something to work with')
+        elif not isinstance(node,Node):
+            node = self.findNodes(_schemaname=node)[0]
+
+        reltype = '_PROP'
 
         s = Schema(node)
         r = self.jump(node,'out',reltype)
@@ -95,6 +104,65 @@ class Graph:
     def getNodes(self):
         return [r.n for r in self.db.query('MATCH (n) return n')]
 
+    def exportCypher(self,filters=['Node'],detach=False):
+
+        prefix='m'
+        counter = {}
+        counter['export'] = 0
+
+
+        def swapuid(props):
+            if not props['_uid'].startswith(prefix):
+                print('swapping',props['_uid'])
+                counter['export'] += 1
+                props['_uid']='%s%s' % (prefix,counter['export'])
+            else:
+                counter['export'] = max(counter['export'],int(props['_uid'][len(prefix):]))
+
+
+        def nodename(node):
+            name = attrFromList(node, ['techname', 'firstname', 'name', '_uid'])
+            name = name.lower()
+            name = '_' + name
+            name = name.replace('__','_')
+            return name
+
+        creates = []
+        for node in self.findNodes():
+            name = nodename(node)
+            isnode = 'Node' in node._labels
+            labels = [l for l in list(node._labels) if l not in filters]
+            #if isnode:
+            #    labels.append('Node')
+
+            props = dict(node.__dict__)
+            del (props['_labels'])
+            print(props['_uid'])
+            swapuid(props)
+            creates.append('(%s:%s %s)' % (name, ':'.join(labels), self.dict2cypher(props)))
+
+        for row in self.query('MATCH (n)-[r]->(m) return n,r,m'):
+            rel = row.r
+            source= row.n
+            target = row.m
+            sourcename = nodename(source)
+            targetname = nodename(target)
+            props = dict()
+            for k,v in rel.__dict__.items():
+                if k not in RELSPECIALS:
+                    props[k]=v
+            swapuid(props)
+            creates.append('(%s)-[:`%s` %s]->(%s)' % (sourcename,rel._reltype,self.dict2cypher(props),targetname))
+        out= 'CREATE\n'+',\n'.join(creates)+';'
+        if detach:
+            out = 'MATCH (n) detach delete n;\n\n'+out
+        return out
+
+def attrFromList(obj,keys,default=None):
+    for key in keys:
+        if hasattr(obj,key) and getattr(obj,key):
+            return getattr(obj,key)
+    return default
 
 class SchemaException(Exception):
     pass
@@ -131,18 +199,23 @@ class Schema:
 
 
 
-    def checkNode(self,node):
+    def checkNode(self,node,returnErrors=False):
         errors = {}
         for k,v in self._props.items():
             rel,prop = v
             min,max = self.arity2mm(rel.arity)
-            if min>0:
-                if not hasattr(node,k):
-                    errors[k]=SchemaException('Must have at least %s %s' % (min,k))
+
+            if not hasattr(node,k):
+                errors[k]=SchemaException('Must have at least %s %s' % (min,k))
             if min>1:
                 if not self.islisty(getattr(node,k)):
                     errors[k]=SchemaException('Must allow for multiple %s' % k)
-        return errors
+
+        if returnErrors:
+            return errors
+        else:
+            return not errors
+
 
     def islisty(self,obj):
         return isinstance(obj,(list,tuple))

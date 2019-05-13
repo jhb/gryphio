@@ -8,5 +8,5 @@ setup(
         license='agpl',
         author='Joerg Baach',
         author_email='pypi@baach.de',
-        description=''
+        description='', install_requires=['chameleon', 'wtforms', 'flask']
 )
