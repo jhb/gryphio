@@ -1,13 +1,13 @@
 match (n) detach delete n;
 
-create (_label:`_Schema` {`description`:"the meta schema to label schemas", `techname`:"_Schema",`_uid`:"m1",_schemaname:"Schema"})
+create (_label:`_Schema` {`description`:"the meta schema to label schemas", `techname`:"_Schema",`_uid`:"m1",_schemaname:"_Schema"})
 create (_description:`_Property` {`description`:"longer description", `scalartype`:"string", `techname`:"description",`_uid`:"m2"})
 create (_techname:`_Property` {`description`:"internal scalar representation", `scalartype`:"string", `techname`:"techname",`_uid`:"m3"})
 create (_uid:`_Property` {`description`:"a unique id", `scalartype`:"string", `techname`:"_uid",`_uid`:"m4"})
 create (_prop:`_Relation` {`description`:"_Schema --_PROP-> _Property", `techname`:"_PROP",`_uid`:"m5",_startschemas:[],_endschemas:[]})
 create (_arity:`_Property` {`description`:"How often can there be the element", `scalartype`:"string", `techname`:"arity",`_uid`:"m7"})
-create (_relation:`_Schema` {`description`:"used to define a type of relation", `techname`:"_Relation",`_uid`:"m8", _schemaname:"Relation"})
-create (_property:`_Schema` {`description`:"A description of  property of semantic meta object", `techname`:"_Property",`_uid`:"m9", _schemaname:"Property"})
+create (_relation:`_Schema` {`description`:"used to define a type of relation", `techname`:"_Relation",`_uid`:"m8", _schemaname:"_Relation"})
+create (_property:`_Schema` {`description`:"A description of  property of semantic meta object", `techname`:"_Property",`_uid`:"m9", _schemaname:"_Property"})
 create (_scalartype:`_Property` {`description`:"Von welchem Typ ist der Wert", `scalartype`:"string", `techname`:"scalartype",`_uid`:"m10"})
 create (_name:`_Property` {`description`:"full name of  thing",  `scalartype`:"string", `techname`:"name",`_uid`:"m11"})
 create (_person:`_Schema` {`description`:"a human", `techname`:"Person",`_uid`:"m12", _schemaname:"Person"})

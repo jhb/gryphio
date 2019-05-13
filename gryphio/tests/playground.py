@@ -39,33 +39,24 @@ print(newnode)
 schema.assignTo(newnode)
 print(newnode)
 
-schema =graph.getSchema('Schema')
+schema =graph.getSchema('_Schema')
 print(schema)
 
 
-s2 = graph.getSchema(_schemaname='Schema')
+s2 = graph.getSchema(_schemaname='_Schema')
 print(s2)
 
-graph.db.rollback()
+print()
+for node in graph.allNodes():
+    print(node)
+    print(graph.checkSchemas(node))
 
+
+graph.db.rollback()
 print()
-schemas = []
-for sn in graph.findNodes(_schemaname=exists):
-    schema = graph.getSchema(sn)
-    schemas.append(schema)
-    print(schema)
-print()
-# for row in graph.db.query('Match (n) return n,id(n) as nid'):
-#     n = row.n
-#     nid = row.nid
-#     print(n)
-#     print(nid)
-#     for schema in schemas:
-#         if schema.checkNode(n):
-#            print(' ',schema._schemaname)
-#     print()
-print(s2.checkNode(s2))
-print(graph.getRelation('m35'))
-print(graph.exportCypher(detach=1))
+
+#print(s2.checkNode(s2))
+#print(graph.getRelation('m35'))
+#print(graph.exportCypher(detach=1))
 # for n in graph.findNodes(_schemaname=Exists()):
 #     s2.assignTo(n)

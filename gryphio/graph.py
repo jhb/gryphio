@@ -23,7 +23,7 @@ class Node(object):
         if '_uid' not in kwargs:
             kwargs['_uid'] = newuid()
         self._labels = set(args)
-        self._labels.add('Node')
+        #self._labels.add('Node')
         self.__dict__.update(kwargs)
 
     def __str__(self):
@@ -78,6 +78,7 @@ class Graph:
         self.db = db
         self.getNode=db.getNode
         self.jump = db.jump
+        self.loadSchemas()
 
     def __getattr__(self,key):
         "proxy to the (neo4j"
@@ -101,7 +102,14 @@ class Graph:
             s._props[row.m.techname]=(row.r,row.m)
         return s
 
-    def getNodes(self):
+    def loadSchemas(self):
+        newschemas = {}
+        for node in self.findNodes(_schemaname=neo4jdb.exists):
+            schema = self.getSchema(node)
+            newschemas[schema._schemaname] = schema
+        self.schemas = newschemas
+
+    def allNodes(self):
         return [r.n for r in self.db.query('MATCH (n) return n')]
 
     def exportCypher(self,filters=['Node'],detach=False):
@@ -157,6 +165,13 @@ class Graph:
         if detach:
             out = 'MATCH (n) detach delete n;\n\n'+out
         return out
+
+    def checkSchemas(self, node):
+        schemanames = set()
+        for name,schema in self.schemas.items():
+            if schema.checkNode(node):
+                schemanames.add(name)
+        return schemanames
 
 def attrFromList(obj,keys,default=None):
     for key in keys:
