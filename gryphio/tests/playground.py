@@ -46,10 +46,14 @@ print(schema)
 s2 = graph.getSchema(_schemaname='_Schema')
 print(s2)
 
-print()
-for node in graph.allNodes():
-    print(node)
-    print(graph.checkSchemas(node))
+# print()
+# for node in graph.allNodes():
+#     print(node)
+#     print(graph.checkSchemas(node))
+
+print (graph.maxArity(alice,'name'))
+s3 = graph.getSchema(_techname='LIKES')
+print(s3)
 
 
 graph.db.rollback()
@@ -57,6 +61,7 @@ print()
 
 #print(s2.checkNode(s2))
 #print(graph.getRelation('m35'))
-#print(graph.exportCypher(detach=1))
+print()
+print(graph.exportCypher(detach=1))
 # for n in graph.findNodes(_schemaname=Exists()):
 #     s2.assignTo(n)

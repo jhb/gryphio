@@ -99,7 +99,7 @@ class Graph:
         s = Schema(node)
         r = self.jump(node,'out',reltype)
         for row in r:
-            s._props[row.m.techname]=(row.r,row.m)
+            s._props[row.m._techname]=(row.r,row.m)
         return s
 
     def loadSchemas(self):
@@ -129,7 +129,7 @@ class Graph:
 
 
         def nodename(node):
-            name = attrFromList(node, ['techname', 'firstname', 'name', '_uid'])
+            name = attrFromList(node, ['_techname', 'firstname', 'name', '_uid'])
             name = name.lower()
             name = '_' + name
             name = name.replace('__','_')
@@ -173,6 +173,17 @@ class Graph:
                 schemanames.add(name)
         return schemanames
 
+    def maxArity(self,node,key):
+        n = 0
+        schemanames = self.checkSchemas(node)
+        for name in schemanames:
+            schema = self.schemas[name]
+            if key in schema._props:
+                mi,ma = schema.arity2mm(schema._props[key][0]._arity)
+            n = max(n,ma)
+        return n
+
+
 def attrFromList(obj,keys,default=None):
     for key in keys:
         if hasattr(obj,key) and getattr(obj,key):
@@ -201,8 +212,8 @@ class Schema:
     def assignTo(self,node):
         for k,v in self._props.items():
             rel,propnode = v
-            amin,amax = self.arity2mm(rel.arity)
-            scalartype = propnode.scalartype
+            amin,amax = self.arity2mm(rel._arity)
+            scalartype = propnode._scalartype
             if scalartype == 'string': scalartype='str'
             if amax>1:
                 newvalue = []
@@ -218,7 +229,7 @@ class Schema:
         errors = {}
         for k,v in self._props.items():
             rel,prop = v
-            min,max = self.arity2mm(rel.arity)
+            min,max = self.arity2mm(rel._arity)
 
             if not hasattr(node,k):
                 errors[k]=SchemaException('Must have at least %s %s' % (min,k))
