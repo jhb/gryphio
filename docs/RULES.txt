@@ -1,0 +1,3 @@
+- _uid is implicit, every node has it
+- _START and _TARGET link a relationschema to the schemas of it's start and target nodes. If there are no _START or
+  _TARGET relations it means that _any_ schema can be used as start/target.
