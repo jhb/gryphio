@@ -2,6 +2,7 @@ from collections import UserList
 import uuid
 import random
 import string
+import re
 
 import neo4jdb
 
@@ -15,6 +16,7 @@ def newuid():
 
 
 RELSPECIALS = ['_source', '_reltype', '_target']
+PREFIX = 'meta'
 
 class Node(object):
 
@@ -125,18 +127,17 @@ class Graph:
 
     def exportCypher(self,filters=['Node'],detach=False):
 
-        prefix='meta'
         counter = {}
         counter['export'] = 0
 
 
         def swapuid(props):
-            if not props['_uid'].startswith(prefix):
-                print('swapping',props['_uid'])
+            if not props['_uid'].startswith(PREFIX):
+                #print('swapping',props['_uid'])
                 counter['export'] += 1
-                props['_uid']='%s%s' % (prefix,counter['export'])
+                props['_uid']='%s%s' % (PREFIX,counter['export'])
             else:
-                counter['export'] = max(counter['export'],int(props['_uid'][len(prefix):]))
+                counter['export'] = max(counter['export'],int(props['_uid'][len(PREFIX):]))
 
 
         def nodename(node):
@@ -156,11 +157,11 @@ class Graph:
 
             props = dict(node.__dict__)
             del (props['_labels'])
-            print(props['_uid'])
+            #print(props['_uid'])
             swapuid(props)
             creates.append('(%s:%s %s)' % (name, ':'.join(labels), self.dict2cypher(props)))
-
-        for row in self.query('MATCH (n)-[r]->(m) return n,r,m'):
+        order = 'order by toInt(substring(r._uid,%s))' % (len(PREFIX))
+        for row in self.query('MATCH (n)-[r]->(m) return n,r,m %s' % order):
             rel = row.r
             source= row.n
             target = row.m
@@ -172,12 +173,15 @@ class Graph:
                     props[k]=v
             swapuid(props)
             creates.append('(%s)-[:`%s` %s]->(%s)' % (sourcename,rel._reltype,self.dict2cypher(props),targetname))
+
+        tmp = [()]
+
         out= 'CREATE\n'+',\n'.join(creates)+';'
         if detach:
             out = 'MATCH (n) detach delete n;\n\n'+out
         return out
 
-    def checkSchemas(self, node):
+    def checkNodeSchemas(self, node):
         schemanames = set()
         for name,schema in self.schemas.items():
             if schema.checkNode(node):
@@ -186,7 +190,8 @@ class Graph:
 
     def maxArity(self,node,key):
         n = 0
-        schemanames = self.checkSchemas(node)
+        ma = n
+        schemanames = self.checkNodeSchemas(node)
         for name in schemanames:
             schema = self.schemas[name]
             if key in schema._props:
