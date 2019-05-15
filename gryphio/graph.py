@@ -25,6 +25,7 @@ class Node(object):
         self._labels = set(args)
         #self._labels.add('Node')
         self.__dict__.update(kwargs)
+        self._id=None
 
     def __str__(self):
         argstring = ', '.join([repr(i) for i in self._labels])
@@ -49,7 +50,7 @@ class Relation(object):
         self.__dict__.update(kwargs)
 
     def __str__(self):
-        argstring = ", ".join([str(self._source), repr(self._reltype), str(self._target)])
+        argstring = ", ".join([repr(self._source), repr(self._reltype), repr(self._target)])
         kwargsstring = ', '.join(
                 ['%s=%s' % (k, repr(v)) for k, v in self.__dict__.items() if k not in RELSPECIALS])
         parameterstring = ', '.join([e for e in [argstring, kwargsstring] if e])
@@ -57,6 +58,16 @@ class Relation(object):
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self._uid)
+
+    def _getProps(self):
+        props = {}
+        for k, v in self.__dict__.items():
+            if k in RELSPECIALS:
+                continue
+            if type(v) == set:
+                v = list(v)
+            props[k] = v
+        return props
 
 class Path:
 
@@ -114,7 +125,7 @@ class Graph:
 
     def exportCypher(self,filters=['Node'],detach=False):
 
-        prefix='m'
+        prefix='meta'
         counter = {}
         counter['export'] = 0
 

@@ -1,5 +1,5 @@
 import neo4j
-from graph import  Node, Relation, Path
+from graph import  Node, Relation, Path, RELSPECIALS
 
 class Neo4jDB():
 
@@ -7,12 +7,15 @@ class Neo4jDB():
         self.driver = neo4j.GraphDatabase.driver(uri, auth=(login, passwd))
         self.session = self.driver.session()
         self.tx = None
-        self._nodecache = {}
+        self._neonodecache = {}
+        self._idnodecache = {}
+        self._uidnodecache = {}
         self._relationcache = {}
+        self._uidrelationcache = {}
 
     def begin(self):
         self.tx = self.session.begin_transaction()
-        self._nodecache = {}
+        self._neonodecache = {}
         self._relationcache = {}
 
     def commit(self):
@@ -24,20 +27,26 @@ class Neo4jDB():
         self.tx = None
 
     def _nodeN2G(self, neonode):
-        if neonode not in self._nodecache:
+        if neonode not in self._neonodecache:
             node = Node(*neonode.labels, **dict(neonode.items()))
-            self._nodecache[neonode]=node
+            self._neonodecache[neonode]=node
             node._labels = set(node._labels)
-        return self._nodecache[neonode]
+            node._id=neonode.id
+        node = self._neonodecache[neonode]
+        self._idnodecache[node._id] = node
+        self._uidnodecache[node._uid] = node
+        return node
 
     def _relN2G(self,neorel):
         if neorel not in self._relationcache:
-            relation = Relation(self._nodeN2G(neorel.start_node),
+            relation = Relation(self.getNodeById(neorel.start_node.id), #self._nodeN2G(neorel.start_node),
                             neorel.type,
-                            self._nodeN2G(neorel.end_node),
+                            self.getNodeById(neorel.end_node.id), #self._nodeN2G(neorel.end_node),
                             **dict(neorel.items()))
             self._relationcache[neorel]=relation
-        return self._relationcache[neorel]
+        relation =  self._relationcache[neorel]
+        self._uidrelationcache[relation._uid] = relation
+        return relation
 
     def _pathN2G(self, neopath):
         path = Path()
@@ -62,6 +71,7 @@ class Neo4jDB():
         if not self.tx:
             self.begin()
         out = Result()
+        #print(query,kwargs)
         data = self.tx.run(query,**kwargs)
 
         for row in data:
@@ -104,14 +114,25 @@ class Neo4jDB():
             n = r.first.n
         return n
 
+    def getNodeById(self,id):
+        if id not in self._idnodecache:
+            q = "MATCH (n) where id(n) = {id} return n"
+            r = self.query(q,id=id)
+            if r:
+                self._idnodecache[id]=r.first.n
+        return self._idnodecache.get(id)
 
     def getNode(self,_uid):
         if isinstance(_uid,Node):
+
             _uid = _uid._uid
-        q = "MATCH (n) where n._uid=%s return n limit 1" % repr(_uid)
-        r = self.query(q)
-        if r:
-            return r.first.n
+        if _uid not in self._uidnodecache:
+            q = "MATCH (n) where n._uid=%s return n limit 1" % repr(_uid)
+            r = self.query(q)
+            if r:
+                self._uidnodecache[_uid] = r.first.n
+        return self._uidnodecache.get(_uid)
+
 
     def findNodes(self,**kwargs):
         f = []
@@ -164,10 +185,14 @@ class Neo4jDB():
     def getRelation(self,_uid):
         if isinstance(_uid,Relation):
             _uid = _uid._uid
-        q = "MATCH ()-[r]->() where r._uid=%s return r limit 1" % repr(_uid)
-        r = self.query(q)
-        if r:
-            return r.first.r
+
+        if _uid not in self._uidrelationcache:
+            q = "MATCH ()-[r]->() where r._uid=%s return r limit 1" % repr(_uid)
+            r = self.query(q)
+            if r:
+                self._uidrelationcache[_uid] = r.first.r
+        return self._uidrelationcache.get(_uid)
+
 
     def findRelations(self,**kwargs):
         f = []
@@ -185,7 +210,6 @@ class Neo4jDB():
             return [row.r for row in r]
 
 
-
     def dict2cypher(self,d):
         out = []
         for k,v in d.items():
@@ -194,7 +218,31 @@ class Neo4jDB():
         return '{'+','.join(out)+'}'
 
     def storeRelation(self,relation):
-        pass
+
+        # XXX is this the best place to do this?
+        if not relation._source._uid in self._uidnodecache:
+            self.storeNode(relation._source)
+        if not relation._target._uid in self._uidnodecache:
+            self.storeNode(relation._target)
+
+        # check if there is an old one by uid
+        old = self.getRelation(relation._uid)
+
+        if old and old._reltype == relation._reltype:
+            # print('updating old')
+            q = "MATCH (n)-[r]->(m) where r._uid={ruid} SET r = {props} return r"
+            r = self.query(q,ruid=old._uid,props=relation._getProps())
+        else:
+            if old:
+                # print('removing old')
+                q = "MATCH (n)-[r]->(m) where r._uid={ruid} DELETE r"
+                r = self.query(q,ruid=old._uid)
+
+            #print('creating new')
+            q = "MATCH (n),(m) where n._uid={nuid} and m._uid={muid} CREATE (n)-[r:%s {props}]->(m) return r" % relation._reltype
+            r = self.query(q,nuid=relation._source._uid,muid=relation._target._uid,props = relation._getProps())
+
+        return r.first.r
 
     def delRelation(self,relation):
         pass
