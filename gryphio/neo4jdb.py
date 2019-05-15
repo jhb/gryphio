@@ -1,5 +1,5 @@
 import neo4j
-from graph import  Node, Relation, Path, RELSPECIALS
+from graph import  Node, Relation, Path, RELSPECIALS, PREFIX
 
 class Neo4jDB():
 
@@ -140,11 +140,11 @@ class Neo4jDB():
             if not isinstance(v,Filter):
                 v = Filter(value=v)
             f.append(v.s(k))
+        order = 'order by toInt(substring(n._uid,%s))' % (len(PREFIX))
         if f:
-            q = "MATCH (n) where %s return n" % (' AND '.join(f))
+            q = "MATCH (n) where %s return n %s" % (' AND '.join(f),order)
         else:
-            q = "MATCH (n) return n"
-
+            q = "MATCH (n) return n %s " % order
         r = self.query(q)
         if r:
             return [row.n for row in r]
@@ -200,10 +200,11 @@ class Neo4jDB():
             if not isinstance(v,Filter):
                 v = Filter(value=v)
             f.append(v.s(k))
+        order = 'order by toInt(substring(r._uid,%s))' % (len(PREFIX))
         if f:
-            q = "MATCH ()-[r]->() where %s return r" % (' AND '.join(f))
+            q = "MATCH ()-[r]->() where %s return r %s" % (' AND '.join(f),order)
         else:
-            q = "MATCH ()-[r]->() return r"
+            q = "MATCH ()-[r]->() return r %s" % order
 
         r = self.query(q)
         if r:
