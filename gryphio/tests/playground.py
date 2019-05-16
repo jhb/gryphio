@@ -14,29 +14,29 @@ n = p.nodes[0]
 n2 = db.getNode('meta17')
 n2._labels.add('foobar')
 n2._labels.add('foobar2')
-n2._labels.remove('Person')
+#n2._labels.remove('Person')
 n3 = db.storeNode(n2)
 print(n2 == n == n3)
 print(n)
 print(n2)
 print(n3)
 
-person = db.getNode('meta12')
+
 
 
 
 alice=graph.getNode('meta17')
-person = graph.getNode('meta12')
+bob=graph.getNode('meta16')
 #graph.jump(person,'out',['M_N_PROP','bar'],'M_Property')
 
-schema = graph.getSchema('Person')
-print(schema)
-print(schema.checkNode(alice))
-print(schema.getPropKeys())
+person = graph.getSchema('Person')
+print('person?',repr(person))
+print(person.checkNode(alice))
+print(person.getPropKeys())
 
 newnode = graph.storeNode(Node())
 print(newnode)
-schema.assignTo(newnode)
+person.assignTo(newnode)
 print(newnode)
 
 schema =graph.getSchema('_Schema')
@@ -68,6 +68,7 @@ print()
 
 n5 = Node('Test',name='n5')
 n6 = Node('Test',name='n6')
+
 r = Relation(n5,'testrel',n6,foo='bar')
 print(r.__dict__)
 r2 = graph.storeRelation(r)
@@ -75,3 +76,25 @@ print(r2.__dict__)
 graph.storeRelation(r)
 r._reltype='newrel'
 graph.storeRelation(r)
+person.assignTo(r)
+
+likes = graph.findNodes(_techname='LIKES')[0]
+print(graph.allowedSourceSchemas(likes))
+print(graph.allowedTargetSchemas(likes))
+
+print(graph.relationPossible(alice,'LIKES',bob))
+
+p1 = Node()
+person.assignTo(p1)
+graph.storeNode(p1)
+p2 = Node()
+person.assignTo(p2)
+graph.storeNode(p2)
+print('p1->p2',graph.relationPossible(p1,'LIKES',p2))
+r3 = Relation(p1,'LIKES',p2)
+graph.storeRelation(r3)
+print('p1->p2',graph.relationPossible(p1,'LIKES',p2))
+p3 = Node()
+person.assignTo(p3)
+graph.storeNode(p3)
+print('p3->p2',graph.relationPossible(p3,'LIKES',p2))

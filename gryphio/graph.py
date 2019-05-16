@@ -17,6 +17,7 @@ def newuid():
 
 RELSPECIALS = ['_source', '_reltype', '_target']
 PREFIX = 'meta'
+ALL = 'all'
 
 class Node(object):
 
@@ -89,8 +90,6 @@ class Graph:
 
     def __init__(self, db):
         self.db = db
-        self.getNode=db.getNode
-        self.jump = db.jump
         self.loadSchemas()
 
     def __getattr__(self,key):
@@ -108,7 +107,6 @@ class Graph:
             node = self.findNodes(_schemaname=node)[0]
 
         reltype = '_PROP'
-
         s = Schema(node)
         r = self.jump(node,'out',reltype)
         for row in r:
@@ -155,7 +153,7 @@ class Graph:
             #if isnode:
             #    labels.append('Node')
 
-            props = dict(node.__dict__)
+            props = dict([(k,v) for k,v in node.__dict__.items() if k not in ['_id']])
             del (props['_labels'])
             #print(props['_uid'])
             swapuid(props)
@@ -195,9 +193,60 @@ class Graph:
         for name in schemanames:
             schema = self.schemas[name]
             if key in schema._props:
-                mi,ma = schema.arity2mm(schema._props[key][0]._arity)
+                mi,ma = arity2mm(schema._props[key][0]._arity)
             n = max(n,ma)
         return n
+
+    def allowedSourceSchemas(self,schema):
+        allowed = []
+        for row in self.jump(schema,'out','_SOURCE'):
+            allowed.append((row.r,row.m))
+        return allowed
+
+    def allowedTargetSchemas(self,schema):
+        allowed = []
+        for row in self.jump(schema, 'out', '_TARGET'):
+            allowed.append((row.r, row.m))
+        return allowed
+
+    def relationPossible(self,source,reltype,target):
+        r = self.findNodes(_techname=reltype)
+        if not r:
+            raise Exception('Invalid reltype')
+        relschema = r[0]
+
+        schemas = self.allowedSourceSchemas(relschema)
+        if schemas:
+            schemanames = set([s[1]._schemaname for s in schemas])
+            if not schemanames & source._labels: #intersection
+                print ('source schemas',schemanames,source._labels)
+                return False
+            #check arity, XXX do this with events
+            existing = self.jump(source,'out',reltype)
+            mi,ma = arity2mm(relschema._sourcearity)
+            if len(existing)>= ma:
+                print('source limit')
+                return False
+
+            schemas = self.allowedTargetSchemas(relschema)
+            if schemas:
+                schemanames = set([s[1]._schemaname for s in schemas])
+                if not schemanames & target._labels:  # intersection
+                    print('target schemas')
+                    return False
+                # check arity
+                existing = self.jump(source, 'in', reltype)
+                mi, ma = arity2mm(relschema._targetarity)
+                if len(existing) >= ma:
+                    print('target limit')
+                    return False
+
+        else:
+            pass #no schemas, everything goes
+
+        #check for arities
+
+        return True
 
 
 def attrFromList(obj,keys,default=None):
@@ -222,22 +271,25 @@ class Schema:
     def __str__(self):
         return 'Schema(%s)' % self.__dict__
 
+
     def getPropKeys(self):
         return tuple(self._props.keys())
 
-    def assignTo(self,node):
+    def assignTo(self, obj):
         for k,v in self._props.items():
             rel,propnode = v
-            amin,amax = self.arity2mm(rel._arity)
+            amin,amax = arity2mm(rel._arity)
             scalartype = propnode._scalartype
             if scalartype == 'string': scalartype='str'
             if amax>1:
                 newvalue = []
             else:
                 newvalue =  __builtins__.get(scalartype)()
-            if not hasattr(node,k):
-                setattr(node,k,newvalue)
-        return node
+            if not hasattr(obj, k):
+                setattr(obj, k, newvalue)
+        if hasattr(obj,'_labels'):
+            obj._labels.add(self._schemaname)
+        return obj
 
 
 
@@ -245,7 +297,7 @@ class Schema:
         errors = {}
         for k,v in self._props.items():
             rel,prop = v
-            min,max = self.arity2mm(rel._arity)
+            min,max = arity2mm(rel._arity)
 
             if not hasattr(node,k):
                 errors[k]=SchemaException('Must have at least %s %s' % (min,k))
@@ -262,31 +314,34 @@ class Schema:
     def islisty(self,obj):
         return isinstance(obj,(list,tuple))
 
-    def arity2mm(self,arity):
-        min=0
-        max=0
 
-        try:
-            arity = int(arity)
-        except:
-            pass
+def arity2mm(arity):
+    min=0
+    max=0
+
+    try:
+        arity = int(arity)
+    except:
+        pass
 
 
-        if type(arity)==int:
-            min=arity
-            max=arity
-        elif ',' in arity:
-            parts = arity.split(',')
-            min = parts[0].strip()
-            max = parts[1].strip()
-        elif arity=='*':
-            max=None
-        elif arity=='?':
-            max=1
-        elif arity=='+':
-            min=1
-            max=None
-        return min,max
+    if type(arity)==int:
+        min=arity
+        max=arity
+    elif ',' in arity:
+        parts = arity.split(',')
+        min = parts[0].strip()
+        max = parts[1].strip()
+    elif arity=='*':
+        max=None
+    elif arity=='?':
+        max=1
+    elif arity=='+':
+        min=1
+        max=None
+    return min,max
+
+
 
 
 
