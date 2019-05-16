@@ -40,6 +40,8 @@ CREATE
 (_likes)-[:`_SOURCE` {`_uid`:'meta39'}]->(_person),
 (_likes)-[:`_TARGET` {`_uid`:'meta40'}]->(_person),
 (_source)-[:`_SOURCE` {`_uid`:'meta41'}]->(_relation),
-(_target)-[:`_SOURCE` {`_uid`:'meta42'}]->(_relation),
-(_alice)-[:`LIKES` {`_uid`:'meta43'}]->(_bob),
-(_bob)-[:`LIKES` {`_uid`:'meta44'}]->(_alice);
+(_source)-[:`_TARGET` {`_uid`:'meta42'}]->(_schema),
+(_target)-[:`_SOURCE` {`_uid`:'meta43'}]->(_relation),
+(_target)-[:`_TARGET` {`_uid`:'meta44'}]->(_schema),
+(_alice)-[:`LIKES` {`_uid`:'meta45'}]->(_bob),
+(_bob)-[:`LIKES` {`_uid`:'meta46'}]->(_alice);
