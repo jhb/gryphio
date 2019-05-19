@@ -1,5 +1,5 @@
-chrGraphworld Ideen
-================
+Gryphio Ideen
+=============
 
 Schema
 ------

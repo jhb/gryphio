@@ -279,7 +279,7 @@ class Schema:
         for k,v in self._props.items():
             rel,propnode = v
             amin,amax = arity2mm(rel._arity)
-            scalartype = propnode._scalartype
+            scalartype = propnode._fieldtype
             if scalartype == 'string': scalartype='str'
             if amax>1:
                 newvalue = []
