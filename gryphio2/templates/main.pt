@@ -42,21 +42,20 @@
 <a href="/">Main</a>
 <hr>
 <div>
-    <div tal:condition="not messages">&nbsp;</div>
-    <div tal:repeat="message messages"><span style="background-color:yellow">${structure: message}</span></div>
-    <div>&nbsp;</div>
+    <span tal:condition="not messages">&nbsp;</span>
+    <span tal:repeat="message messages"><span style="background-color:yellow">${structure: message}</span></span>
 </div>
 
 <table border="0" width="100%" heigth="100%">
     <tr valign="top">
-        <td width="60%">
+        <td width="75%">
             <c metal:use-macro="templates['queryform'].macros.queryform" />
 
             <c metal:use-macro="templates['resultgraph'].macros.resultgraph" />
             <div>&nbsp;</div>
             <c metal:use-macro="templates['resulttable'].macros.resulttable" />
         </td>
-        <td width="40%">
+        <td width="25%">
             <div metal:define-slot="editor" id="editor">
                 Editorx
             </div>

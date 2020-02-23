@@ -61,4 +61,4 @@ if __name__ == '__main__':
     print('x'*30)
     auth = ("bolt://localhost:7687", "neo4j", "admin")
     db = NeoDB(*auth)
-    api.run(debug=1, port=9000)
+    api.run(debug=1, host='0.0.0.0', port=9000)

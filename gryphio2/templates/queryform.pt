@@ -2,7 +2,6 @@
 <head></head>
 <body>
 <div metal:define-macro="queryform">
-    foo
     <form action="">
         <textarea id="query" name="query" style="width:80%"
                   tal:content="query"></textarea>
