@@ -1,0 +1,24 @@
+<html>
+<head></head>
+<body>
+<div metal:define-macro="queryform">
+    foo
+    <form action="">
+        <textarea id="query" name="query" style="width:80%"
+                  tal:content="query"></textarea>
+        <input type="submit" value="ctrl-enter">
+    </form>
+    <script>
+        queryarea = document.getElementById('query');
+        queryarea.focus();
+
+        queryarea.addEventListener('keydown', function (e) {
+            console.log(e);
+            if (e.keyCode == 13 && e.ctrlKey) {
+                this.form.submit();
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

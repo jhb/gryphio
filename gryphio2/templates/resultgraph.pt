@@ -1,0 +1,71 @@
+<html>
+<head></head>
+<body>
+<div metal:define-macro="resultgraph"
+     tal:define="result db.graphJSON(query)" id="graphdiv">
+
+    <script src="//unpkg.com/three"></script>
+    <script src="//unpkg.com/three-spritetext"></script>
+        <script src="//unpkg.com/3d-force-graph"></script>
+    <div id="graph"></div>
+    <script>
+    const Graph = ForceGraph3D()
+      (document.getElementById('graph'))
+        .numDimensions(3)
+        .width(window.innerWidth*0.6)
+        .height(500)
+        .backgroundColor('black')
+        .linkOpacity(0.4)
+        .graphData(${result})
+        .nodeLabel('name')
+        .nodeAutoColorBy('label')
+        .linkDirectionalArrowLength(2.5)
+        .linkDirectionalArrowRelPos(1)
+        .linkWidth(0.2)
+        .linkCurvature(0.1)
+        .onNodeDragEnd(node => {
+          node.fx = node.x;
+          node.fy = node.y;
+          node.fz = node.z;
+          console.log(node)
+        })
+        .nodeThreeObject(node => {
+          // use a sphere as a drag handle
+          const obj = new THREE.Mesh(
+            new THREE.SphereGeometry(10),
+            new THREE.MeshBasicMaterial({ depthWrite: false, transparent: true, opacity: 0 })
+          );
+
+          // add text sprite as child
+          const sprite = new SpriteText(node.name);
+          sprite.color = node.color;
+          sprite.textHeight = 6;
+          obj.add(sprite);
+
+          return obj;
+        })
+        .linkThreeObjectExtend(true)
+        .linkThreeObject(link => {
+          // extend link with text sprite
+          const sprite = new SpriteText(link.name);
+          sprite.color = 'darkgrey';
+          sprite.textHeight = 2.5;
+          return sprite;
+        })
+        .linkPositionUpdate((sprite, { start, end }) => {
+          const middlePos = Object.assign(...['x', 'y', 'z'].map(c => ({
+            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
+          })));
+
+          // Position sprite
+          Object.assign(sprite.position, middlePos);
+        })
+        .onNodeClick(node=>{showProps('/node/'+node.id)})
+        .onLinkClick(link=>{showProps('/edge/'+link.id)})
+    ;
+
+
+  </script>
+</div>
+</body>
+</html>

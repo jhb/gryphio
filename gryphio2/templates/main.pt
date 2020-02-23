@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html metal:define-macro="main">
+<head>
+    <style>
+        body,a, textarea, input {
+            background-color: black;
+            color: lightgrey
+        }
+        textarea {
+            font-size:1.3em;
+        }
+
+        input {font-size: 1.2em;}
+
+        a {text-decoration: None}
+
+        th {border-bottom: 1px solid white}
+    </style>
+    <script>
+        function getAjax(url, success) {
+            var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+            xhr.open('GET', url);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState>3 && xhr.status==200) success(xhr.responseText);
+            };
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send();
+            return xhr;
+	    }
+
+        function showProps(path) {
+            getAjax(path,function(data){
+                var editor = document.getElementById('editor');
+                editor.innerHTML=data;
+            })
+        }
+    </script>
+
+</head>
+<body tal:define="messages flask.get_flashed_messages()">
+
+<a href="/">Main</a>
+<hr>
+<div>
+    <div tal:condition="not messages">&nbsp;</div>
+    <div tal:repeat="message messages"><span style="background-color:yellow">${structure: message}</span></div>
+    <div>&nbsp;</div>
+</div>
+
+<table border="0" width="100%" heigth="100%">
+    <tr valign="top">
+        <td width="60%">
+            <c metal:use-macro="templates['queryform'].macros.queryform" />
+
+            <c metal:use-macro="templates['resultgraph'].macros.resultgraph" />
+            <div>&nbsp;</div>
+            <c metal:use-macro="templates['resulttable'].macros.resulttable" />
+        </td>
+        <td width="40%">
+            <div metal:define-slot="editor" id="editor">
+                Editorx
+            </div>
+
+        </td>
+    </tr>
+
+</table>
+
+
+
+</body>
+</html>

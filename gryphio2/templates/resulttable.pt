@@ -1,0 +1,30 @@
+<html>
+<head></head>
+<body>
+<div metal:define-macro="resulttable"
+     tal:define="result db.getResult(query)">
+    <table cellspacing="5">
+        <tr tal:define="row result.peek()">
+            <th tal:repeat="key row.keys()" tal:content="key"></th>
+
+        </tr>
+        <tr tal:repeat="row result">
+            <td tal:repeat="value row.values()">
+            <span tal:omit-tag="" tal:define="valuetype db.getType(value)">
+                <span tal:condition="valuetype=='node'">
+                    <a href="/node/${value.id}" onclick="showProps(this.href); return false">${db.searchkeys(value,'shortname','name','vorname',default='???')}
+                        [${', '.join(value.labels)}]</a>
+                </span>
+                <span tal:condition="valuetype=='edge'">
+                    <a href="/edge/${value.id}" onclick="showProps(this.href); return false">${value.type}</a>
+                </span>
+                <span tal:condition="valuetype=='other'" tal:replace="value"></span>
+            </span>
+            </td>
+
+        </tr>
+    </table>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+Properties
+----------
+- add
+- remove
+- edit+save
+
+- key/value
+
+- _technical (_type, _labels)
+- _uid
+
+graph
+-----
+- add node
+- remove node (with edges)
+- add edge (between two nodes)
+
+

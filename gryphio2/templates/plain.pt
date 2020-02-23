@@ -1,0 +1,19 @@
+<html metal:define-macro="plain">
+<head>
+    <style>
+        body,a, textarea, input {
+            background-color: black;
+            color: lightgrey
+        }
+        textarea {
+            font-size:1.3em;
+        }
+
+        input {font-size: 1.2em;}
+    </style>
+
+</head>
+<body>
+<div metal:define-slot="content"></div>
+</body>
+</html>

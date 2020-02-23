@@ -1,0 +1,22 @@
+
+<div metal:define-macro="properties">
+    <form action="" id="propertiesform">
+        <div>
+            <div>${objtype.capitalize()} ID ${obj.id}</div>
+            <div>&nbsp;</div>
+            <div>
+                <label>Labels</label>
+            </div>
+
+            <input name="labels" value="${', '.join(labels)}"/><br>&nbsp;
+
+            <div>&nbsp;</div>
+            <div tal:repeat="item obj.items()">
+                <label>${item[0]}</label><br>
+                <input name="${'props.'+item[0]}" value="${item[1]}"/><br>&nbsp;
+            </div>
+
+
+        </div>
+    </form>
+</div>
